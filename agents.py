@@ -79,7 +79,7 @@ class AIExtractionAgent:
         if not self.api_key:
             raise ValueError("Gemini API Key is missing. Please configure it in the sidebar.")
             
-        model = genai.GenerativeModel("gemini-3.5-flash")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         
         prompt = """You are an expert AI Resume Parsing Agent.
 Analyze the resume content and extract the candidate information.
@@ -137,17 +137,7 @@ Return ONLY a valid JSON object matching this structure. Do NOT include markdown
             
         except Exception as e:
             print(f"Gemini API generation or parsing failed: {e}")
-            # Return empty structure for the next agent to validate / fallback
-            return {
-                "Full Name": "",
-                "Phone Number": "",
-                "Email": "",
-                "Skills": "",
-                "Education": "",
-                "College Name": "",
-                "Experience": "",
-                "Applied Role": ""
-            }
+            raise RuntimeError(f"Gemini API failure: {str(e)}")
 
 
 class ValidationAgent:
