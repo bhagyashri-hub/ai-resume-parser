@@ -1,0 +1,16 @@
+# Python caching
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments & virtualenvs
+.env
+.venv
+venv/
+ENV/
+
+# Excel spreadsheets / local database databases
+*.xlsx
+
+# Streamlit config/cache
+.streamlit/

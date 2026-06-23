@@ -1,0 +1,11 @@
+streamlit
+pandas
+openpyxl
+python-dotenv
+google-generativeai
+pdfplumber
+python-docx
+phonenumbers
+spacy
+pytesseract
+opencv-python

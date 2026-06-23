@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Resume Parser – Excel Export</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0b0f1a;
+      --card: #111827;
+      --card2: #1a2235;
+      --border: #1e2d45;
+      --accent: #6366f1;
+      --accent2: #8b5cf6;
+      --green: #10b981;
+      --red: #ef4444;
+      --text: #f1f5f9;
+      --muted: #64748b;
+      --glow: rgba(99, 102, 241, 0.25);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 80px;
+    }
+
+    /* ---- HEADER ---- */
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.35);
+      color: #a5b4fc;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      padding: 5px 14px;
+      border-radius: 999px;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+    h1 {
+      font-size: clamp(28px, 5vw, 46px);
+      font-weight: 800;
+      line-height: 1.15;
+      background: linear-gradient(135deg, #e0e7ff 0%, #a5b4fc 50%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 15px;
+      max-width: 480px;
+      margin-inline: auto;
+      line-height: 1.6;
+    }
+
+    /* ---- MAIN CARD ---- */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px;
+      width: 100%;
+      max-width: 640px;
+      box-shadow: 0 0 60px rgba(99,102,241,0.08);
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: -1px; right: -1px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 20px 20px 0 0;
+    }
+
+    /* ---- UPLOAD ZONE ---- */
+    #drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .25s ease;
+      background: var(--card2);
+      position: relative;
+    }
+    #drop-zone:hover, #drop-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(99,102,241,0.06);
+      box-shadow: 0 0 30px var(--glow);
+    }
+    #drop-zone input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .upload-icon {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 26px;
+      box-shadow: 0 8px 24px var(--glow);
+    }
+    .upload-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .upload-hint {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .formats {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .fmt-chip {
+      background: rgba(99,102,241,0.12);
+      border: 1px solid rgba(99,102,241,0.25);
+      color: #a5b4fc;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 6px;
+      letter-spacing: .05em;
+    }
+
+    /* ---- FILE PREVIEW ---- */
+    #file-preview {
+      display: none;
+      align-items: center;
+      gap: 14px;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-top: 16px;
+    }
+    #file-preview.visible { display: flex; }
+    .file-icon { font-size: 28px; }
+    .file-info { flex: 1; }
+    .file-name { font-size: 14px; font-weight: 600; }
+    .file-size { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .remove-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 18px;
+      transition: color .2s;
+    }
+    .remove-btn:hover { color: var(--red); }
+
+    /* ---- API KEY INPUT ---- */
+    .field {
+      margin-top: 20px;
+    }
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #a5b4fc;
+      margin-bottom: 8px;
+    }
+    .field input {
+      width: 100%;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: 'Inter', monospace;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+
+    /* ---- PARSE BUTTON ---- */
+    #parse-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      margin-top: 24px;
+      padding: 15px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: .02em;
+      transition: all .25s ease;
+      box-shadow: 0 4px 24px var(--glow);
+    }
+    #parse-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(99,102,241,0.4);
+    }
+    #parse-btn:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ---- PROGRESS ---- */
+    #progress-wrap {
+      display: none;
+      margin-top: 24px;
+    }
+    #progress-wrap.visible { display: block; }
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      transition: all .3s ease;
+    }
+    .step.active {
+      border-color: var(--accent);
+      color: var(--text);
+      box-shadow: 0 0 16px var(--glow);
+    }
+    .step.done {
+      border-color: var(--green);
+      color: #6ee7b7;
+      background: rgba(16,185,129,0.06);
+    }
+    .step-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+      transition: all .3s;
+    }
+    .step.active .step-icon {
+      background: var(--accent);
+      animation: pulse-ring .8s ease infinite;
+    }
+    .step.done .step-icon { background: var(--green); }
+
+    @keyframes pulse-ring {
+      0%,100% { box-shadow: 0 0 0 0 rgba(99,102,241,.6); }
+      50%      { box-shadow: 0 0 0 6px rgba(99,102,241,0); }
+    }
+
+    /* ---- RESULT TABLE ---- */
+    #result-section {
+      display: none;
+      margin-top: 28px;
+    }
+    #result-section.visible { display: block; }
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .result-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--green);
+    }
+    .dl-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(16,185,129,0.15);
+      border: 1px solid rgba(16,185,129,0.35);
+      color: #34d399;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all .2s;
+      text-decoration: none;
+    }
+    .dl-btn:hover {
+      background: rgba(16,185,129,0.25);
+      transform: translateY(-1px);
+    }
+    .result-table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      background: #1a2235;
+      color: #a5b4fc;
+      font-weight: 700;
+      text-align: left;
+      padding: 11px 16px;
+      font-size: 11px;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    td {
+      padding: 11px 16px;
+      border-top: 1px solid var(--border);
+      color: var(--text);
+      vertical-align: top;
+      max-width: 260px;
+      word-break: break-word;
+    }
+    tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+    .tag {
+      display: inline-block;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.25);
+      color: #a5b4fc;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 5px;
+      margin: 2px 2px 2px 0;
+    }
+
+    /* ---- ERROR ---- */
+    #error-box {
+      display: none;
+      margin-top: 20px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.35);
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: #fca5a5;
+      font-size: 13px;
+    }
+    #error-box.visible { display: block; }
+
+    /* ---- SPINNER ---- */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      display: none;
+    }
+    .spinner.active { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- FOOTER ---- */
+    footer {
+      margin-top: 48px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="badge">🤖 AI-Powered</div>
+  <h1>Resume → Excel Parser</h1>
+  <p class="subtitle">Parse resumes one by one — each is saved as a new row in one master Excel file.</p>
+</header>
+
+<div class="card">
+
+  <!-- Drop Zone -->
+  <div id="drop-zone">
+    <input type="file" id="file-input" accept=".pdf,.docx,.doc,.jpg,.jpeg,.png" />
+    <div class="upload-icon">📄</div>
+    <div class="upload-title">Drop your resume here</div>
+    <div class="upload-hint">or click to browse files</div>
+    <div class="formats">
+      <span class="fmt-chip">PDF</span>
+      <span class="fmt-chip">DOCX</span>
+      <span class="fmt-chip">DOC</span>
+      <span class="fmt-chip">JPG</span>
+      <span class="fmt-chip">PNG</span>
+    </div>
+  </div>
+
+  <!-- File Preview -->
+  <div id="file-preview">
+    <span class="file-icon" id="file-emoji">📄</span>
+    <div class="file-info">
+      <div class="file-name" id="file-name-label">—</div>
+      <div class="file-size" id="file-size-label">—</div>
+    </div>
+    <button class="remove-btn" id="remove-btn" title="Remove file">✕</button>
+  </div>
+
+  <!-- API Key -->
+  <div class="field">
+    <label for="api-key-input">🔑 API Key</label>
+    <input id="api-key-input" type="text" placeholder="pk_ai_resume_2026" value="pk_ai_resume_2026" autocomplete="off" />
+  </div>
+
+  <!-- Parse Button -->
+  <button id="parse-btn" disabled>
+    <div class="spinner" id="btn-spinner"></div>
+    <span id="btn-label">⚡ Parse &amp; Add to Excel</span>
+  </button>
+
+  <!-- Action Row -->
+  <div id="action-row" style="display:none;align-items:center;justify-content:space-between;margin-top:16px;gap:10px;flex-wrap:wrap;">
+    <span id="total-badge" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.35);color:#a5b4fc;font-size:13px;font-weight:600;padding:7px 16px;border-radius:8px;">📋 Total: 0 resumes</span>
+    <div style="display:flex;gap:8px;">
+      <a id="dl-all-btn" class="dl-btn" href="#" style="text-decoration:none;">⬇ Download All Excel</a>
+      <button id="reset-btn" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;font-size:13px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;">🗑 Reset</button>
+    </div>
+  </div>
+
+  <!-- Error Box -->
+  <div id="error-box"></div>
+
+  <!-- Progress Steps -->
+  <div id="progress-wrap">
+    <div class="steps">
+      <div class="step" id="step-1">
+        <div class="step-icon">📤</div>
+        <span>Uploading resume to server...</span>
+      </div>
+      <div class="step" id="step-2">
+        <div class="step-icon">🔍</div>
+        <span>Extracting text via OCR engine...</span>
+      </div>
+      <div class="step" id="step-3">
+        <div class="step-icon">🤖</div>
+        <span>AI parsing fields (Gemini LLM)...</span>
+      </div>
+      <div class="step" id="step-4">
+        <div class="step-icon">📊</div>
+        <span>Saving row to master Excel...</span>
+      </div>
+      <div class="step" id="step-5">
+        <div class="step-icon">✅</div>
+        <span>Row added! Excel updated.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result Preview - cumulative rows table -->
+  <div id="result-section">
+    <div class="result-header">
+      <h3>✅ All Parsed Resumes</h3>
+    </div>
+    <div class="result-table-wrap" style="overflow-x:auto;">
+      <table id="result-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>File</th>
+            <th>Full Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Skills</th>
+            <th>Education</th>
+            <th>Experience</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="result-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer>AI Resume Parser &nbsp;·&nbsp; FastAPI + Gemini + OCR &nbsp;·&nbsp; Excel Export</footer>
+
+<script>
+  const API_BASE = "http://localhost:8000";
+
+  const dropZone    = document.getElementById("drop-zone");
+  const fileInput   = document.getElementById("file-input");
+  const filePreview = document.getElementById("file-preview");
+  const fileEmoji   = document.getElementById("file-emoji");
+  const fileNameLbl = document.getElementById("file-name-label");
+  const fileSizeLbl = document.getElementById("file-size-label");
+  const removeBtn   = document.getElementById("remove-btn");
+  const apiKeyInp   = document.getElementById("api-key-input");
+  const parseBtn    = document.getElementById("parse-btn");
+  const btnSpinner  = document.getElementById("btn-spinner");
+  const btnLabel    = document.getElementById("btn-label");
+  const progressWrap = document.getElementById("progress-wrap");
+  const resultSection = document.getElementById("result-section");
+  const resultBody  = document.getElementById("result-body");
+  const errorBox    = document.getElementById("error-box");
+  const downloadLink = document.getElementById("download-link");
+
+  let selectedFile = null;
+
+  const FIELD_LABELS = {
+    "Full Name": "👤 Full Name",
+    "Email": "📧 Email",
+    "Phone": "📱 Phone",
+    "Address": "📍 Address",
+    "Skills": "🛠 Skills",
+    "Education": "🎓 Education",
+    "Experience": "💼 Experience",
+    "Projects": "🚀 Projects",
+    "Certifications": "📜 Certifications"
+  };
+
+  function getFileEmoji(name) {
+    const ext = name.split('.').pop().toLowerCase();
+    if (ext === 'pdf') return '📕';
+    if (ext === 'docx' || ext === 'doc') return '📘';
+    if (['jpg','jpeg','png'].includes(ext)) return '🖼';
+    return '📄';
+  }
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  function showFile(file) {
+    selectedFile = file;
+    fileEmoji.textContent = getFileEmoji(file.name);
+    fileNameLbl.textContent = file.name;
+    fileSizeLbl.textContent = formatBytes(file.size);
+    filePreview.classList.add('visible');
+    parseBtn.disabled = false;
+    clearError();
+    resultSection.classList.remove('visible');
+    progressWrap.classList.remove('visible');
+    resetSteps();
+  }
+
+  function clearFile() {
+    selectedFile = null;
+    fileInput.value = '';
+    filePreview.classList.remove('visible');
+    parseBtn.disabled = true;
+    clearError();
+    resultSection.classList.remove('visible');
+    progressWrap.classList.remove('visible');
+    resetSteps();
+  }
+
+  function clearError() {
+    errorBox.textContent = '';
+    errorBox.classList.remove('visible');
+  }
+
+  function showError(msg) {
+    errorBox.textContent = '⚠ ' + msg;
+    errorBox.classList.add('visible');
+  }
+
+  // Drag & Drop
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const f = e.dataTransfer.files[0];
+    if (f) showFile(f);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) showFile(fileInput.files[0]);
+  });
+
+  removeBtn.addEventListener('click', clearFile);
+
+  // Steps
+  function resetSteps() {
+    for (let i = 1; i <= 5; i++) {
+      const s = document.getElementById('step-' + i);
+      s.classList.remove('active', 'done');
+    }
+  }
+
+  function activateStep(n) {
+    for (let i = 1; i < n; i++) {
+      const s = document.getElementById('step-' + i);
+      s.classList.remove('active');
+      s.classList.add('done');
+      s.querySelector('.step-icon').textContent = '✓';
+    }
+    const cur = document.getElementById('step-' + n);
+    cur.classList.add('active');
+    cur.classList.remove('done');
+  }
+
+  function completeAllSteps() {
+    for (let i = 1; i <= 5; i++) {
+      const s = document.getElementById('step-' + i);
+      s.classList.remove('active');
+      s.classList.add('done');
+      s.querySelector('.step-icon').textContent = '✓';
+    }
+  }
+
+  const API_KEY_VAL = () => apiKeyInp.value.trim();
+
+  // Load existing rows on page load
+  async function loadExistingRows() {
+    try {
+      const r = await fetch(`${API_BASE}/excel-rows`, { headers: { 'x-api-key': API_KEY_VAL() } });
+      if (!r.ok) return;
+      const data = await r.json();
+      if (data.total > 0) {
+        data.rows.forEach(row => appendTableRow(row));
+        updateActionRow(data.total);
+      }
+    } catch(_) {}
+  }
+
+  window.addEventListener('load', () => setTimeout(loadExistingRows, 500));
+
+  function appendTableRow(row) {
+    const tr = document.createElement('tr');
+    [
+      row['S.No'] ?? '', row['File Name'] ?? '', row['Full Name'] ?? '',
+      row['Email'] ?? '', row['Phone'] ?? '',
+      (row['Skills'] ?? '').split('\n').slice(0,3).join(', '),
+      row['Education'] ?? '', row['Experience'] ?? '', row['Parsed At'] ?? ''
+    ].forEach(val => {
+      const td = document.createElement('td');
+      td.textContent = val;
+      tr.appendChild(td);
+    });
+    resultBody.appendChild(tr);
+    resultSection.classList.add('visible');
+  }
+
+  function updateActionRow(total) {
+    document.getElementById('action-row').style.display = 'flex';
+    document.getElementById('total-badge').textContent = `📋 Total: ${total} resume${total !== 1 ? 's' : ''}`;
+    const dlBtn = document.getElementById('dl-all-btn');
+    dlBtn.href = `${API_BASE}/download-excel?x-api-key=${API_KEY_VAL()}`;
+    dlBtn.onclick = (e) => {
+      e.preventDefault();
+      const url = `${API_BASE}/download-excel`;
+      fetch(url, { headers: { 'x-api-key': API_KEY_VAL() } })
+        .then(r => r.blob())
+        .then(blob => {
+          const xlsxBlob = new Blob([blob], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(xlsxBlob);
+          a.download = 'all_resumes.xlsx';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        });
+    };
+  }
+
+  // Reset
+  document.getElementById('reset-btn').addEventListener('click', async () => {
+    if (!confirm('Reset all resume data? This cannot be undone.')) return;
+    try {
+      await fetch(`${API_BASE}/reset-excel`, { method: 'DELETE', headers: { 'x-api-key': API_KEY_VAL() } });
+      resultBody.innerHTML = '';
+      resultSection.classList.remove('visible');
+      document.getElementById('action-row').style.display = 'none';
+    } catch(e) { showError('Reset failed'); }
+  });
+
+  // Parse
+  parseBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    const apiKey = apiKeyInp.value.trim();
+    if (!apiKey) { showError("Please enter your API key."); return; }
+
+    clearError();
+    parseBtn.disabled = true;
+    btnSpinner.classList.add('active');
+    btnLabel.textContent = 'Processing…';
+    progressWrap.classList.add('visible');
+    resultSection.classList.remove('visible');
+    resetSteps();
+
+    try {
+      // Step 1 – Uploading
+      activateStep(1);
+      await delay(600);
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      // Step 2 – OCR
+      activateStep(2);
+
+      // Step 3 – AI + append to master Excel
+      activateStep(3);
+      const response = await fetch(`${API_BASE}/append-resume-to-excel`, {
+        method: 'POST',
+        headers: { 'x-api-key': apiKey },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ detail: 'Unknown server error' }));
+        throw new Error(err.detail || `HTTP ${response.status}`);
+      }
+
+      // Step 4 – saved to Excel
+      activateStep(4);
+      await delay(300);
+
+      const data = await response.json();
+
+      // Step 5 – Done
+      completeAllSteps();
+
+      // Append new row to the live table
+      appendTableRow(data.row);
+      updateActionRow(data.total_rows);
+
+      // Clear file for next upload
+      clearFile();
+
+    } catch (err) {
+      showError(err.message || 'Failed to parse resume. Make sure the backend server is running.');
+      resetSteps();
+      progressWrap.classList.remove('visible');
+    } finally {
+      parseBtn.disabled = false;
+      btnSpinner.classList.remove('active');
+      btnLabel.textContent = '⚡ Parse & Add to Excel';
+    }
+  });
+
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
