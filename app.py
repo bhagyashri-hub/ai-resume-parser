@@ -90,8 +90,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Load Gemini API key from environment
+# Load Gemini API key from environment or Streamlit secrets
 api_key = os.getenv("GEMINI_API_KEY", "")
+if not api_key:
+    try:
+        if "GEMINI_API_KEY" in st.secrets:
+            api_key = st.secrets["GEMINI_API_KEY"]
+        elif "gemini_api_key" in st.secrets:
+            api_key = st.secrets["gemini_api_key"]
+    except Exception:
+        pass
 
 # ----------------- SIDEBAR CONFIGURATION -----------------
 with st.sidebar:
@@ -140,7 +148,9 @@ with tab1:
 
     # Verification warning for API Key
     if not api_key:
-        st.error("⚠️ **System Error:** Gemini API Key is missing from the server environment `.env` file.")
+        st.error("⚠️ **System Configuration Error:** Gemini API Key is missing. "
+                 "Please set the `GEMINI_API_KEY` environment variable in your Streamlit Cloud App settings "
+                 "under **Settings** -> **Secrets**.")
 
     col_upload, col_camera = st.columns([1, 1])
 

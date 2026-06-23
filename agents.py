@@ -79,7 +79,7 @@ class AIExtractionAgent:
         if not self.api_key:
             raise ValueError("Gemini API Key is missing. Please configure it in the sidebar.")
             
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-3.5-flash")
         
         prompt = """You are an expert AI Resume Parsing Agent.
 Analyze the resume content and extract the candidate information.
