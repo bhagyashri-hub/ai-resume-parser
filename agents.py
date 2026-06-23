@@ -79,8 +79,6 @@ class AIExtractionAgent:
         if not self.api_key:
             raise ValueError("Gemini API Key is missing. Please configure it in the sidebar.")
             
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        
         prompt = """You are an expert AI Resume Parsing Agent.
 Analyze the resume content and extract the candidate information.
 
@@ -107,37 +105,52 @@ Return ONLY a valid JSON object matching this structure. Do NOT include markdown
 }
 """
         
-        try:
-            # Check if we should pass the raw file bytes for multimodal analysis (scanned PDF or Image)
-            if reader_output["is_scanned"]:
-                # Multimodal request
-                content_parts = [
-                    {"data": reader_output["file_bytes"], "mime_type": reader_output["mime_type"]},
-                    prompt
-                ]
-                response = model.generate_content(
-                    content_parts,
-                    generation_config={"response_mime_type": "application/json"}
-                )
-            else:
-                # Text-only request
-                text_content = reader_output["extracted_text"]
-                # Append a snippet of the text
-                full_prompt = f"{prompt}\n\nResume Text:\n{text_content[:20000]}"
-                response = model.generate_content(
-                    full_prompt,
-                    generation_config={"response_mime_type": "application/json"}
-                )
+        models_to_try = [
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-2.0-flash-lite",
+            "gemini-2.0-flash",
+            "gemini-3.5-flash"
+        ]
+        
+        last_error = None
+        for model_name in models_to_try:
+            try:
+                model = genai.GenerativeModel(model_name)
+                # Check if we should pass the raw file bytes for multimodal analysis (scanned PDF or Image)
+                if reader_output["is_scanned"]:
+                    # Multimodal request
+                    content_parts = [
+                        {"data": reader_output["file_bytes"], "mime_type": reader_output["mime_type"]},
+                        prompt
+                    ]
+                    response = model.generate_content(
+                        content_parts,
+                        generation_config={"response_mime_type": "application/json"}
+                    )
+                else:
+                    # Text-only request
+                    text_content = reader_output["extracted_text"]
+                    # Append a snippet of the text
+                    full_prompt = f"{prompt}\n\nResume Text:\n{text_content[:20000]}"
+                    response = model.generate_content(
+                        full_prompt,
+                        generation_config={"response_mime_type": "application/json"}
+                    )
+                    
+                result_json = response.text.strip()
                 
-            result_json = response.text.strip()
-            
-            # Parse the output
-            extracted_data = json.loads(result_json)
-            return extracted_data
-            
-        except Exception as e:
-            print(f"Gemini API generation or parsing failed: {e}")
-            raise RuntimeError(f"Gemini API failure: {str(e)}")
+                # Parse the output
+                extracted_data = json.loads(result_json)
+                return extracted_data
+                
+            except Exception as e:
+                print(f"Model {model_name} failed: {e}")
+                last_error = e
+                continue
+                
+        # If we reach here, all models failed
+        raise RuntimeError(f"All Gemini models failed. Last error: {str(last_error)}")
 
 
 class ValidationAgent:
